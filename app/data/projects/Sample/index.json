@@ -1,10 +1,10 @@
 {
-    "id": "sample1",
-    "name": "Sample2",
+    "id": "Sample",
+    "name": "sample",
     "models": [
         {
-            "id": "sample3",
-            "name": "Sample4"
+            "id": "design",
+            "name": "Design"
         }
     ],
     "viewerConfigs": {
