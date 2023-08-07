@@ -7,8 +7,8 @@ const tempVec3 = math.vec3();
  */
 class TreeViewContextMenu extends ContextMenu {
 
-    constructor(bimViewer) {
-        super();
+    constructor(bimViewer, cfg={}) {
+        super(cfg);
         this._bimViewer = bimViewer;
         this._buildMenu();
     }
@@ -59,6 +59,24 @@ class TreeViewContextMenu extends ContextMenu {
                         }, 500);
                     });
                     viewer.cameraControl.pivotPos = math.getAABB3Center(aabb);
+                }
+            },
+            {
+                getTitle: (context) => {
+                    return context.viewer.localeService.translate("canvasContextMenu.viewFitSelection") || "View Fit Selected";
+                },
+                getEnabled: (context) => {
+                    return (context.viewer.scene.numSelectedObjects > 0);
+                },
+                doAction: (context) => {
+                    const viewer = context.viewer;
+                    const scene = viewer.scene;
+                    const sceneAABB = scene.getAABB(scene.selectedObjectIds);
+                    viewer.cameraFlight.flyTo({
+                        aabb: sceneAABB,
+                        duration: 0.5
+                    });
+                    viewer.cameraControl.pivotPos = math.getAABB3Center(sceneAABB);
                 }
             },
             {

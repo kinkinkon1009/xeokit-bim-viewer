@@ -42,7 +42,8 @@ class ModelsExplorer extends Controller {
         });
 
         this._modelsContextMenu = new ModelsContextMenu({
-            enableEditModels: cfg.enableEditModels
+            enableEditModels: cfg.enableEditModels,
+            hideOnAction: true
         });
 
         this._modelsInfo = {};
@@ -274,7 +275,8 @@ class ModelsExplorer extends Controller {
                     pbrEnabled: modelInfo.pbrEnabled,
                     backfaces: modelInfo.backfaces,
                     globalizeObjectIds: modelInfo.globalizeObjectIds,
-                    reuseGeometries: (modelInfo.reuseGeometries !== false)
+                    reuseGeometries: (modelInfo.reuseGeometries !== false),
+                    useDataTextures: modelInfo.useDataTextures
                 });
                 model.on("loaded", () => {
                     const checkbox = document.getElementById("" + modelId);

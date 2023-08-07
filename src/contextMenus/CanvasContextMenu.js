@@ -6,6 +6,7 @@ import {math, ContextMenu} from "@xeokit/xeokit-sdk/dist/xeokit-sdk.es.js";
 class CanvasContextMenu extends ContextMenu {
     constructor(cfg = {}) {
         super({
+            hideOnAction: cfg.hideOnAction,
             context: cfg.context,
             items: [
                 [
@@ -17,6 +18,24 @@ class CanvasContextMenu extends ContextMenu {
                             const viewer = context.viewer;
                             const scene = viewer.scene;
                             const sceneAABB = scene.getAABB(scene.visibleObjectIds);
+                            viewer.cameraFlight.flyTo({
+                                aabb: sceneAABB,
+                                duration: 0.5
+                            });
+                            viewer.cameraControl.pivotPos = math.getAABB3Center(sceneAABB);
+                        }
+                    },
+                    {
+                        getTitle: (context) => {
+                            return context.viewer.localeService.translate("canvasContextMenu.viewFitSelection") || "View Fit Selected";
+                        },
+                        getEnabled: (context) => {
+                            return (context.viewer.scene.numSelectedObjects > 0);
+                        },
+                        doAction: (context) => {
+                            const viewer = context.viewer;
+                            const scene = viewer.scene;
+                            const sceneAABB = scene.getAABB(scene.selectedObjectIds);
                             viewer.cameraFlight.flyTo({
                                 aabb: sceneAABB,
                                 duration: 0.5

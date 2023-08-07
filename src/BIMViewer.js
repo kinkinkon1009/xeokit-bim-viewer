@@ -22,6 +22,9 @@ import {ObjectContextMenu} from "./contextMenus/ObjectContextMenu.js";
 import {CanvasContextMenu} from "./contextMenus/CanvasContextMenu.js";
 import {OrthoMode} from "./toolbar/OrthoMode.js";
 import {PropertiesInspector} from "./inspector/PropertiesInspector.js";
+import {ObjectsKdTree3} from "./collision/ObjectsKdTree3.js";
+import {MarqueeSelectionTool} from "./toolbar/MarqueeSelectionTool.js";
+
 
 const hideEdgesMinDrawCount = 5; // FastNavPlugin enables dynamic edges when xeokit's per-frame draw count drops below this
 const scaleCanvasResolutionMinDrawCount = 1000; // FastNavPlugin switches to low-res canvas when xeokit's per-frame draw count rises above this
@@ -96,6 +99,8 @@ function createToolbarTemplate() {
         <button type="button" class="xeokit-i18n xeokit-hide xeokit-btn fa fa-eraser fa-2x disabled" data-xeokit-i18ntip="toolbar.hideObjectsTip" data-tippy-content="Hide objects"></button>
         <!-- Select tool button -->
         <button type="button" class="xeokit-i18n xeokit-select xeokit-btn fa fa-mouse-pointer fa-2x disabled" data-xeokit-i18ntip="toolbar.selectObjectsTip" data-tippy-content="Select objects"></button>    
+          <!-- Marquee select tool button -->
+        <button type="button" class="xeokit-i18n xeokit-marquee xeokit-btn fas fa-object-group fa-2x disabled" data-xeokit-i18ntip="toolbar.marqueeSelectTip" data-tippy-content="Marquee select objects"></button>    
         <!-- section tool button -->
         <button type="button" class="xeokit-i18n xeokit-section xeokit-btn fa fa-cut fa-2x disabled" data-xeokit-i18ntip="toolbar.sliceObjectsTip" data-tippy-content="Slice objects">
             <div class="xeokit-i18n xeokit-section-menu-button disabled" data-xeokit-i18ntip="toolbar.slicesMenuTip"  data-tippy-content="Slices menu">
@@ -238,6 +243,10 @@ class BIMViewer extends Controller {
          */
         this.viewer = viewer;
 
+        this._objectsKdTree3 = new ObjectsKdTree3(({
+            viewer
+        }))
+
         this._customizeViewer();
         this._initCanvasContextMenus();
 
@@ -313,8 +322,11 @@ class BIMViewer extends Controller {
             this.setThreeDModeActive = (active) => {
                 if (active) {
                     bimViewer._firstPersonMode.setActive(false);
+                    bimViewer._marqueeSelectionTool.setEnabled(true);
                     bimViewer.viewer.cameraControl.navMode = "orbit";
                 } else {
+                    bimViewer._marqueeSelectionTool.setEnabled(false);
+                    bimViewer._marqueeSelectionTool.setActive(false);
                     bimViewer._firstPersonMode.setActive(false);
                     bimViewer.viewer.cameraControl.navMode = "planView";
                 }
@@ -325,11 +337,12 @@ class BIMViewer extends Controller {
                 bimViewer.viewer.cameraControl.navMode = active ? "firstPerson" : (threeDActive ? "orbit" : "planView");
                 firstPersonActive = active;
             };
+
         })(this);
 
         this._threeDMode = new ThreeDMode(this, {
             buttonElement: toolbarElement.querySelector(".xeokit-threeD"),
-            cameraControlNavModeMediator: cameraControlNavModeMediator,
+            cameraControlNavModeMediator,
             active: false
         });
 
@@ -340,7 +353,7 @@ class BIMViewer extends Controller {
 
         this._firstPersonMode = new FirstPersonMode(this, {
             buttonElement: toolbarElement.querySelector(".xeokit-firstPerson"),
-            cameraControlNavModeMediator: cameraControlNavModeMediator,
+            cameraControlNavModeMediator,
             active: false
         });
 
@@ -352,6 +365,12 @@ class BIMViewer extends Controller {
         this._selectionTool = new SelectionTool(this, {
             buttonElement: toolbarElement.querySelector(".xeokit-select"),
             active: false
+        });
+
+        this._marqueeSelectionTool = new MarqueeSelectionTool(this, {
+            buttonElement: toolbarElement.querySelector(".xeokit-marquee"),
+            active: false,
+            objectsKdTree3: this._objectsKdTree3
         });
 
         this._showSpacesMode = new ShowSpacesMode(this, {
@@ -403,7 +422,7 @@ class BIMViewer extends Controller {
             this.fire("reset", true);
         });
 
-        this._mutexActivation([this._hideTool, this._selectionTool, this._sectionTool]);
+        this._mutexActivation([this._hideTool, this._selectionTool, this._marqueeSelectionTool, this._sectionTool]);
 
         explorerElement.querySelector(".xeokit-showAllObjects").addEventListener("click", (event) => {
             this.setAllObjectsVisible(true);
@@ -553,8 +572,12 @@ class BIMViewer extends Controller {
 
     _initCanvasContextMenus() {
 
-        this._canvasContextMenu = new CanvasContextMenu(this);
-        this._objectContextMenu = new ObjectContextMenu(this);
+        this._canvasContextMenu = new CanvasContextMenu(this, {
+            hideOnAction: true
+        });
+        this._objectContextMenu = new ObjectContextMenu(this, {
+            hideOnAction: true
+        });
 
         this.viewer.cameraControl.on("rightClick", (e) => {
 
@@ -1846,6 +1869,7 @@ class BIMViewer extends Controller {
         this._queryTool.setEnabled(enabled);
         this._hideTool.setEnabled(enabled);
         this._selectionTool.setEnabled(enabled);
+        this._marqueeSelectionTool.setEnabled(enabled);
         this._showSpacesMode.setEnabled(enabled);
         this._sectionTool.setEnabled(enabled);
 
@@ -1890,6 +1914,19 @@ class BIMViewer extends Controller {
         this._sectionTool.clear();
     }
 
+    /**
+     * Disables all sections.
+     */
+    disableSections() {
+        this._sectionTool.disableSections();
+    }
+
+    /**
+     * Enables all sections.
+     */
+    enableSections() {
+        this._sectionTool.enableSections();
+    }
 
     /**
      * Inverts the direction of sections.
